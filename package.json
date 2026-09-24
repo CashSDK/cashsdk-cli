@@ -1,0 +1,13 @@
+{
+  "name": "cashsdk-cli",
+  "version": "0.0.0-development",
+  "private": true,
+  "description": "CashSDK CLI, implemented in Go. Source of truth for the `cashsdk` binary published to npm (package `cashsdk-cli`) and Homebrew (cashsdk/tap/cashsdk). See scripts/release.sh.",
+  "scripts": {
+    "build": "go build -o dist/cashsdk .",
+    "dev": "go run .",
+    "test": "go test ./...",
+    "vet": "go vet ./...",
+    "clean": "rm -rf dist"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "cashsdk-cli",
+  "version": "__VERSION__",
+  "description": "CashSDK CLI: in-app purchases, subscriptions and paywalls for iOS and Android, from your terminal.",
+  "keywords": [
+    "cashsdk",
+    "in-app-purchase",
+    "iap",
+    "subscriptions",
+    "paywall",
+    "storekit",
+    "play-billing",
+    "cli"
+  ],
+  "homepage": "https://docs.cashsdk.com/cli/overview",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CashSDK/cashsdk-cli.git"
+  },
+  "bugs": {
+    "url": "https://cashsdk.com/contact"
+  },
+  "license": "SEE LICENSE IN LICENSE.md",
+  "bin": {
+    "cashsdk": "bin/cashsdk.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md",
+    "LICENSE.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
