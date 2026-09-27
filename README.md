@@ -63,14 +63,13 @@ are never guessed: which entitlement a product unlocks (pass
 store credentials, which upload only in the dashboard, never through the CLI
 or an agent.
 
-Unreleased source behavior: `--map pro=access` covers every catalog row for `pro`,
-including each Play base plan. Use `--map pro:annual=premium` for one base plan;
-that specific selection wins over a broad product selection. Existing links are
-preserved, and an already-present mapping is not rewritten. `--map-all` fills only
-unmapped active access rows, excluding consumables, inactive rows and products
-explicitly sold without access. `cashsdk catalog` shows `identifier:basePlanId` so
-the rows are distinguishable. These changes require a CLI release before the
-published binary has them.
+`--map pro=access` covers every catalog row for `pro`, including each Play base
+plan. Use `--map pro:annual=premium` for one base plan; that specific selection
+wins over a broad product selection. Existing links are preserved, and an
+already-present mapping is not rewritten. `--map-all` fills only unmapped active
+access rows, excluding consumables, inactive rows and products explicitly sold
+without access. `cashsdk catalog` shows `identifier:basePlanId` so the rows are
+distinguishable.
 
 Exit codes tell you what happened: `0` done, `2` usage, `3` auth, `4` remote
 error, `5` blocked on a step only a human can do, `6` finished with items that
