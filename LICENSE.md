@@ -21,12 +21,13 @@ modifications. You are not granted any other rights beyond what is expressly sta
 Subject to the foregoing, it is forbidden to copy, merge, publish, distribute, sublicense,
 and/or sell the Software.
 
-This Commercial License applies to the whole of this Software. The CashSDK client SDKs for
-iOS and Android are distributed separately under the MIT license, and nothing in this
+This Commercial License applies to the whole of this Software. The CashSDK client SDKs are
+distributed separately under the MIT license: the SDKs for iOS and Android, and the SDKs for
+the web (the npm packages cashsdk-web, cashsdk-react and cashsdk-node). Nothing in this
 Commercial License restricts your rights under that license; that MIT grant is what permits
-you to embed those SDKs in your own application and distribute it to end users. The full text
-of this Commercial License shall be included in all copies or substantial portions of the
-Software.
+you to embed those SDKs in your own applications and services and distribute them to end
+users. The full text of this Commercial License shall be included in all copies or
+substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
 BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
