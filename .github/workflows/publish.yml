@@ -1,0 +1,121 @@
+# Publishes cashsdk-cli to npm via Trusted Publishing (OIDC): no token, no OTP.
+#
+# Requires the one-time npmjs.com setup on the cashsdk-cli package:
+#   Settings, Trusted Publisher: GitHub Actions, owner CashSDK, repo cashsdk-cli,
+#   workflow publish.yml, environment left empty.
+#
+# The verification job rebuilds every platform binary and runs the security
+# suite without OIDC permission. Only the final, isolated job can publish.
+name: publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, e.g. 2.0.2 (must match this commit's release tag)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Validate version and release tag
+        run: |
+          if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "invalid release version: $VERSION" >&2
+            exit 2
+          fi
+          tag_commit="$(git rev-list -n 1 "v$VERSION" 2>/dev/null || true)"
+          if [[ -z "$tag_commit" || "$tag_commit" != "$GITHUB_SHA" ]]; then
+            echo "v$VERSION must exist and point at $GITHUB_SHA (found: ${tag_commit:-missing})" >&2
+            exit 1
+          fi
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Security and test gate
+        run: |
+          go vet ./...
+          go test -race ./...
+          go run github.com/securego/gosec/v2/cmd/gosec@v2.29.0 -quiet ./...
+          go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
+          scripts/check-third-party-notices.sh
+      - name: Build all platforms and stage the npm package
+        run: scripts/release.sh "$VERSION"
+      - name: Verify the GitHub release contains these exact binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_dir="$(mktemp -d)"
+          gh release download "v$VERSION" --dir "$release_dir" \
+            --pattern "checksums.txt" --pattern "cashsdk_${VERSION}_*"
+          (cd "$release_dir" && sha256sum --check checksums.txt)
+          tar -xOf "$release_dir/cashsdk_${VERSION}_darwin_arm64.tar.gz" cashsdk | cmp - dist/release/npm/dist/darwin_arm64/cashsdk
+          tar -xOf "$release_dir/cashsdk_${VERSION}_darwin_amd64.tar.gz" cashsdk | cmp - dist/release/npm/dist/darwin_amd64/cashsdk
+          tar -xOf "$release_dir/cashsdk_${VERSION}_linux_arm64.tar.gz" cashsdk | cmp - dist/release/npm/dist/linux_arm64/cashsdk
+          tar -xOf "$release_dir/cashsdk_${VERSION}_linux_amd64.tar.gz" cashsdk | cmp - dist/release/npm/dist/linux_amd64/cashsdk
+          unzip -p "$release_dir/cashsdk_${VERSION}_windows_amd64.zip" cashsdk.exe | cmp - dist/release/npm/dist/windows_amd64/cashsdk.exe
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+      - name: npm with OIDC trusted-publishing support
+        run: npm install -g npm@12.0.2 && npm --version
+      - name: Sanity-check the staged package
+        run: |
+          test "$(node -p "require('./dist/release/npm/package.json').name")" = "cashsdk-cli"
+          test "$(node -p "require('./dist/release/npm/package.json').version")" = "$VERSION"
+          test "$(node dist/release/npm/bin/cashsdk.js version)" = "cashsdk $VERSION"
+          test -f dist/release/npm/THIRD_PARTY_NOTICES.md
+          (cd dist/release/npm && npm pack --dry-run)
+      - name: Seal the verified npm package
+        run: |
+          tar -czf npm-package.tar.gz -C dist/release npm
+          sha256sum npm-package.tar.gz > npm-package.tar.gz.sha256
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-package-${{ inputs.version }}
+          path: |
+            npm-package.tar.gz
+            npm-package.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write # restricted to the job that performs npm publish
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-package-${{ inputs.version }}
+      - name: Verify and extract the sealed package
+        run: |
+          sha256sum --check npm-package.tar.gz.sha256
+          mkdir -p dist/release
+          tar -xzf npm-package.tar.gz -C dist/release
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.20.0
+      - name: npm with OIDC trusted-publishing support
+        run: npm install -g npm@12.0.2 && npm --version
+      - name: Recheck package identity
+        run: |
+          test "$(node -p "require('./dist/release/npm/package.json').name")" = "cashsdk-cli"
+          test "$(node -p "require('./dist/release/npm/package.json').version")" = "$VERSION"
+          test "$(node dist/release/npm/bin/cashsdk.js version)" = "cashsdk $VERSION"
+      - name: Publish
+        working-directory: dist/release/npm
+        run: npm publish --access public --provenance
